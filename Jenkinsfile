@@ -1,37 +1,40 @@
 pipeline {
     agent any
     stages {
-        stage('Code Check-in') {
-            steps { 
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://github.com/vijayg92/datastructures-algorithms']]])
-                sh('ls -ltr')
+        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+            // Pull latest code
+            stage('Code Check-in') {
+                steps { 
+                    checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://github.com/vijayg92/datastructures-algorithms']]])
+                    sh('ls -ltr')
+                }
             }
-        }
-        stage('Template Validation') {
-            steps { 
-                sh('/opt/tools/packer validate -var-file=vars.json app.json') 
+            // Validate Packer template
+            stage('Template Validation') {
+                
+                    steps { 
+                        sh('/opt/tools/packer validate -var-file=vars.json app.json') 
+                    }
+                }
+            // Build Golden Image
+            stage('Prepare Golden Image') {
+                steps { 
+                    sh('/opt/tools/packer build -var-file=vars.json app.json')
+                }
             }
-        }
-        stage('Prepare Golden Image') {
-            steps { 
-                sh('/opt/tools/packer build -var-file=vars.json app.json')
+            // Tag image and publish to AWS
+            stage('Tag & Publish') {
+                steps { 
+                    echo 'Prepare Golden Image'
+                }
             }
-        }
-        stage('Validate Image') {
-            steps { 
-                sh('ruby -Ilib -Ispec -rrspec/autorun /opt/serverspec/spec/webserver_spec.rb')
+            // Deploy Image in AWS Cloud
+            stage('Deploy Image') {
+                steps { 
+                    echo 'Pull latest code'
+                }
             }
-        }
-
-        stage('Tag & Publish') {
-            steps { 
-                echo 'Prepare Golden Image'
-            }
-        }
-        stage('Deploy Image') {
-            steps { 
-                echo 'Pull latest code'
-            }
+    
         }
     }
 }
