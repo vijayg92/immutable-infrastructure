@@ -1,40 +1,44 @@
 pipeline {
-    agent any
+
     stages {
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
-            // Pull latest code
-            stage('Code Check-in') {
-                steps { 
-                    checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://github.com/vijayg92/datastructures-algorithms']]])
-                    sh('ls -ltr')
+        // Pull latest code
+        stage('Code Check-in') {
+            steps { 
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'https://github.com/vijayg92/immutable-infrastructure']]])
+                sh('ls -ltr')
+            }
+        }
+        // Validate Packer template
+        stage('Template Validation') {
+            steps { 
+                withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh script: 'cd packer/webserver/ && /opt/tools/packer validate -var-file=vars.json app.json', returnStatus: true
                 }
             }
-            // Validate Packer template
-            stage('Template Validation') {
-                
-                    steps { 
-                        sh('/opt/tools/packer validate -var-file=vars.json app.json') 
-                    }
-                }
-            // Build Golden Image
-            stage('Prepare Golden Image') {
-                steps { 
-                    sh('/opt/tools/packer build -var-file=vars.json app.json')
+        }
+        // Build Golden Image
+        stage('Build Golden Image') {
+            steps { 
+                withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh script: 'cd packer/webserver/ && /opt/tools/packer build -var-file=vars.json app.json', returnStatus: true
                 }
             }
-            // Tag image and publish to AWS
-            stage('Tag & Publish') {
-                steps { 
-                    echo 'Prepare Golden Image'
+        }
+        // Validate Terraform Templates
+        stage('Validate') {
+            steps { 
+                withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh script: 'cd terraform/webserver/ && /opt/tools/terraform plan -auto-approve', returnStatus: true
                 }
             }
-            // Deploy Image in AWS Cloud
-            stage('Deploy Image') {
-                steps { 
-                    echo 'Pull latest code'
+        }
+        // Deploy golden ami to AWS cloud
+        stage('Deploy') {
+            steps { 
+                withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh script: 'cd terraform/webserver/ && /opt/tools/terraform apply -auto-approve, returnStatus: true
                 }
             }
-    
         }
     }
 }
