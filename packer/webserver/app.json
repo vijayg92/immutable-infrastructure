@@ -1,0 +1,49 @@
+{
+"builders": [
+  {
+      "access_key": "{{user `aws_access_key`}}",
+      "secret_key": "{{user `aws_secret_key`}}",
+      "region": "{{user `ami_region`}}",
+      "ami_name": "{{user `ami_name`}}-{{timestamp}}",
+      "instance_type": "{{user `ami_instance_type`}}",
+      "temporary_security_group_source_cidrs": "122.161.49.192/32",
+      "ssh_username": "ec2-user",
+      "ssh_pty" : true,
+      "type": "amazon-ebs",
+      "source_ami_filter": {
+        "owners": ["993267408692"],
+        "most_recent": true
+      },
+      "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/xvda",
+          "volume_size": "{{user `rootfs_size`}}",
+          "volume_type": "gp2",
+          "delete_on_termination": true
+        }
+      ],
+      "tags": {
+        "Name": "{{user `ami_name`}}",
+        "Application": "{{user `app_name`}}",
+        "Environment": "{{user `app_env`}}",
+        "Owner": "{{user `app_owner`}}"
+      }
+  }
+],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "../provisioner/webserver.sh",
+      "destination": "/tmp/webserver.sh"
+    },
+    {
+      "type": "file",
+      "source": "../serverspec",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "script": "scripts/webserver.sh"
+  }
+]
+}

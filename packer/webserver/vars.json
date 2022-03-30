@@ -1,0 +1,11 @@
+{
+  "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+  "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+  "ami_region": "ap-northeast-1",
+  "ami_instance_type": "t2.micro",
+  "root_fs_size": "20",
+  "ami_name": "webserver-stable-`{{timestamp}}`",
+  "app_name": "WebServer",
+  "app_env": "development",
+  "ami_description": "AWS Golden Image for WebServers"
+}
